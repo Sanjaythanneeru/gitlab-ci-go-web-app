@@ -1,0 +1,87 @@
+stages:
+  - build
+  - test
+  - docker_build_push
+  - k8_manifest_image_update
+  
+
+image: golang
+
+build_job:
+  stage: build
+  script:
+    - go build -o main .
+    - ls
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /ci skip/'
+      when: never
+    - changes:
+      - ./helm/go-web-app/values.yaml
+      when: never
+    - changes:
+      - "**/*"
+      when: always
+
+test_job:
+  stage: test
+  script:
+    - go test .
+    - ls
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /ci skip/'
+      when: never
+    - changes:
+      - ./helm/go-web-app/values.yaml
+      when: never
+    - changes:
+      - "**/*"
+      when: always
+
+containerization:
+  stage: docker_build_push
+  image: docker
+  script:
+    - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+    - docker build -t sanjay2107/go-web-app:${CI_COMMIT_SHORT_SHA} .
+    - docker push sanjay2107/go-web-app:${CI_COMMIT_SHORT_SHA}
+    - docker images
+  tags:
+    - docker
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /ci skip/'
+      when: never
+    - changes:
+      - ./helm/go-web-app/values.yaml
+      when: never
+    - changes:
+      - "**/*"
+      when: always
+
+k8_manifest_image_update:
+  stage: k8_manifest_image_update
+  variables:
+    GIT_STRATEGY: none
+    COMM: ${CI_COMMIT_SHORT_SHA}
+  script: |
+   rm -rf go-web-app-cicd/
+   git clone https://Sanjaythanneeru:${GITLAB_TOKEN}@gitlab.com/devops2480431/go-web-app-cicd.git
+   cd go-web-app-cicd
+   sed -i "s/tag: .*/tag: ${CI_COMMIT_SHORT_SHA}/g" ./helm/go-web-app/values.yaml
+   cat ./helm/go-web-app/values.yaml
+   git add .
+   git commit -m "ci skip"
+   git push https://Sanjaythanneeru:${GITLAB_TOKEN}@gitlab.com/devops2480431/go-web-app-cicd.git HEAD:main
+  tags:
+    - docker
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /ci skip/'
+      when: never
+    - changes:
+      - ./helm/go-web-app/values.yaml
+      when: never
+    - changes:
+      - "**/*"
+      when: always
+
+
+
