@@ -61,7 +61,6 @@ k8_manifest_image_update:
   stage: k8_manifest_image_update
   variables:
     GIT_STRATEGY: none
-    COMM: ${CI_COMMIT_SHORT_SHA}
   script: |
    rm -rf go-web-app-cicd/
    git clone https://Sanjaythanneeru:${GITLAB_TOKEN}@gitlab.com/devops2480431/go-web-app-cicd.git
